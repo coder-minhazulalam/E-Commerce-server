@@ -4,6 +4,7 @@ import helmet from "helmet";
 import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
 import { collectionsRouter, looksRouter, productsRouter } from "./routes/catalog.routes.js";
+import { ordersRouter } from "./routes/orders.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
 
 export const app: Express = express();
@@ -28,5 +29,6 @@ app.use("/api/health", healthRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/collections", collectionsRouter);
 app.use("/api/looks", looksRouter); // backward compat redirect
+app.use("/api/orders", ordersRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
