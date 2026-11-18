@@ -1,68 +1,92 @@
 import { Router, type Router as ExpressRouter } from "express";
 import { z } from "zod";
-import { looks, products, type Product } from "../catalog.js";
+import { collections, products, type Product } from "../catalog.js";
 
-export const catalogRouter: ExpressRouter = Router();
+// ── Products router ──────────────────────────────────────────────────────────
+export const productsRouter: ExpressRouter = Router();
 
 const querySchema = z.object({
   category: z.string().trim().min(1).max(80).optional(),
   q: z.string().trim().min(1).max(120).optional(),
   sort: z.enum(["featured", "price-asc", "price-desc", "name-asc"]).default("featured"),
-  page: z.string().regex(/^[1-9]\d*$/).optional().transform((value) => value === undefined ? 1 : Number(value)).pipe(z.number().int().min(1).max(100)),
-  pageSize: z.string().regex(/^[1-9]\d*$/).optional().transform((value) => value === undefined ? 9 : Number(value)).pipe(z.number().int().min(1).max(24)),
+  featured: z.enum(["true"]).optional(),
+  page: z
+    .string()
+    .regex(/^[1-9]\d*$/)
+    .optional()
+    .transform((v) => (v === undefined ? 1 : Number(v)))
+    .pipe(z.number().int().min(1).max(100)),
+  pageSize: z
+    .string()
+    .regex(/^[1-9]\d*$/)
+    .optional()
+    .transform((v) => (v === undefined ? 9 : Number(v)))
+    .pipe(z.number().int().min(1).max(24)),
 }).strict();
 
-function badQuery(response: Parameters<Parameters<typeof catalogRouter.get>[1]>[1]) {
-  response.status(400).json({ error: { code: "INVALID_QUERY", message: "Query parameters are invalid." } });
+function badQuery(res: Parameters<Parameters<typeof productsRouter.get>[1]>[1]) {
+  res.status(400).json({ error: { code: "INVALID_QUERY", message: "Query parameters are invalid." } });
 }
 
-catalogRouter.get("/products", (request, response) => {
-  const parsed = querySchema.safeParse(request.query);
-  if (!parsed.success) {
-    badQuery(response);
-    return;
-  }
-  const { category, q, sort, page, pageSize } = parsed.data;
-  let filtered = products.filter((product) =>
-    (!category || product.category.toLowerCase() === category.toLowerCase()) &&
-    (!q || `${product.name} ${product.category} ${product.description}`.toLowerCase().includes(q.toLowerCase())),
+productsRouter.get("/", (req, res) => {
+  const parsed = querySchema.safeParse(req.query);
+  if (!parsed.success) { badQuery(res); return; }
+
+  const { category, q, sort, featured, page, pageSize } = parsed.data;
+  let filtered = products.filter((p) =>
+    (!category || p.category.toLowerCase() === category.toLowerCase()) &&
+    (!q || `${p.name} ${p.category} ${p.description}`.toLowerCase().includes(q.toLowerCase())) &&
+    (!featured || p.featured === true),
   );
+
   const byName = (a: Product, b: Product) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
   if (sort === "price-asc") filtered = filtered.sort((a, b) => a.price - b.price || byName(a, b));
   else if (sort === "price-desc") filtered = filtered.sort((a, b) => b.price - a.price || byName(a, b));
   else if (sort === "name-asc") filtered = filtered.sort(byName);
+
   const total = filtered.length;
   const start = (page - 1) * pageSize;
-  response.status(200).json({ items: filtered.slice(start, start + pageSize), page, pageSize, total });
+  res.status(200).json({ items: filtered.slice(start, start + pageSize), page, pageSize, total });
 });
 
-catalogRouter.get("/products/:productId", (request, response) => {
-  const item = products.find(({ id, slug }) => id === request.params.productId || slug === request.params.productId);
+productsRouter.get("/:productId", (req, res) => {
+  const item = products.find(({ id, slug }) =>
+    id === req.params.productId || slug === req.params.productId,
+  );
   if (!item) {
-    response.status(404).json({ error: { code: "NOT_FOUND", message: "Product not found." } });
+    res.status(404).json({ error: { code: "NOT_FOUND", message: "Product not found." } });
     return;
   }
-  response.status(200).json({ item });
+  res.status(200).json({ item });
 });
 
-export const looksRouter: ExpressRouter = Router();
+// ── Collections router ───────────────────────────────────────────────────────
+export const collectionsRouter: ExpressRouter = Router();
 
-looksRouter.get("/", (_request, response) => {
-  response.status(200).json({ items: looks, total: looks.length });
+collectionsRouter.get("/", (_req, res) => {
+  res.status(200).json({ items: collections, total: collections.length });
 });
 
-looksRouter.get("/:lookId", (request, response) => {
-  const param = request.params.lookId.toLowerCase();
-  const look = looks.find(
-    ({ id, slug, lookNumber }) =>
+collectionsRouter.get("/:slug", (req, res) => {
+  const param = req.params.slug.toLowerCase();
+  const collection = collections.find(
+    ({ id, slug, number }) =>
       id.toLowerCase() === param ||
       slug.toLowerCase() === param ||
-      String(lookNumber) === param,
+      String(number) === param,
   );
-  if (!look) {
-    response.status(404).json({ error: { code: "NOT_FOUND", message: "Look not found." } });
+  if (!collection) {
+    res.status(404).json({ error: { code: "NOT_FOUND", message: "Collection not found." } });
     return;
   }
-  const lookProducts = products.filter((p) => look.productIds.includes(p.id));
-  response.status(200).json({ look, products: lookProducts });
+  const collectionProducts = products.filter((p) => collection.productIds.includes(p.id));
+  res.status(200).json({ collection, products: collectionProducts });
 });
+
+// Legacy alias: /api/looks → /api/collections (backward compat)
+export const looksRouter: ExpressRouter = Router();
+looksRouter.get("/", (_req, res) => res.redirect("/api/collections"));
+looksRouter.get("/:id", (req, res) => res.redirect(`/api/collections/${req.params.id}`));
+
+// Legacy alias: /api/products (catalogRouter was the old name)
+export const catalogRouter = productsRouter;
