@@ -1,0 +1,15 @@
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+
+# Local credentials and owner-only design handoff
+.env
+.env.*
+!.env.example
+DESIGN.md
+
+# Tooling and operating system
+.DS_Store
+*.log
