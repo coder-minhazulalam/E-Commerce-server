@@ -46,11 +46,23 @@ catalogRouter.get("/products/:productId", (request, response) => {
 });
 
 export const looksRouter: ExpressRouter = Router();
+
+looksRouter.get("/", (_request, response) => {
+  response.status(200).json({ items: looks, total: looks.length });
+});
+
 looksRouter.get("/:lookId", (request, response) => {
-  const look = looks.find(({ id }) => id === request.params.lookId);
+  const param = request.params.lookId.toLowerCase();
+  const look = looks.find(
+    ({ id, slug, lookNumber }) =>
+      id.toLowerCase() === param ||
+      slug.toLowerCase() === param ||
+      String(lookNumber) === param,
+  );
   if (!look) {
     response.status(404).json({ error: { code: "NOT_FOUND", message: "Look not found." } });
     return;
   }
-  response.status(200).json({ look });
+  const lookProducts = products.filter((p) => look.productIds.includes(p.id));
+  response.status(200).json({ look, products: lookProducts });
 });

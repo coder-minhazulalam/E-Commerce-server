@@ -59,11 +59,28 @@ describe("product detail", () => {
   });
 });
 
-describe("look detail", () => {
-  it("returns a matching look", async () => {
-    const response = await request(app).get("/api/looks/weekend-edit");
+describe("GET /api/looks", () => {
+  it("returns all nine editorial looks", async () => {
+    const response = await request(app).get("/api/looks");
     expect(response.status).toBe(200);
-    expect(response.body.look).toMatchObject({ id: "weekend-edit", productIds: ["product-001", "product-002", "product-005"] });
+    expect(response.body.items).toHaveLength(9);
+    expect(response.body.total).toBe(9);
+    expect(response.body.items[0]).toMatchObject({ id: "weekend-edit", slug: "look-01", lookNumber: 1 });
+    expect(response.body.items[8]).toMatchObject({ id: "warm-neutral", slug: "look-09", lookNumber: 9 });
+  });
+});
+
+describe("look detail", () => {
+  it("returns a matching look by id or slug with populated products", async () => {
+    const responseById = await request(app).get("/api/looks/weekend-edit");
+    expect(responseById.status).toBe(200);
+    expect(responseById.body.look).toMatchObject({ id: "weekend-edit", productIds: ["product-001", "product-002", "product-005"] });
+    expect(responseById.body.products).toHaveLength(3);
+    expect(responseById.body.look.itemDots).toHaveLength(3);
+
+    const responseBySlug = await request(app).get("/api/looks/look-01");
+    expect(responseBySlug.status).toBe(200);
+    expect(responseBySlug.body.look.id).toBe("weekend-edit");
   });
 
   it("returns the required not-found error shape", async () => {
