@@ -3,6 +3,7 @@ import express, { type Express } from "express";
 import helmet from "helmet";
 import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
+import { catalogRouter, looksRouter } from "./routes/catalog.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
 
 export const app: Express = express();
@@ -24,5 +25,7 @@ app.use(
 app.use(express.json({ limit: "100kb" }));
 
 app.use("/api/health", healthRouter);
+app.use("/api", catalogRouter);
+app.use("/api/looks", looksRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
