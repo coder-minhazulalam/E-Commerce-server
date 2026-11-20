@@ -13,33 +13,34 @@ describe("GET /api/products", () => {
   });
 
   it("filters category without case sensitivity", async () => {
-    const response = await getProducts("?category=outerwear");
+    const response = await getProducts("?category=sherwani");
     expect(response.body.items.map((item: { category: string }) => item.category)).toEqual([
-      "Outerwear",
-      "Outerwear",
-      "Outerwear",
+      "Sherwani",
     ]);
-    expect(response.body.total).toBe(3);
+    expect(response.body.total).toBe(1);
   });
 
   it("searches case-insensitively across product text", async () => {
-    const response = await getProducts("?q=OVERCOAT");
-    expect(response.body.items.map((item: { slug: string }) => item.slug)).toEqual(["wool-overcoat"]);
+    const response = await getProducts("?q=SHERWANI");
+    expect(response.body.items.map((item: { slug: string }) => item.slug)).toEqual(["royal-zardozi-sherwani"]);
   });
 
   it.each([
-    ["price-asc", ["relaxed-oxford-shirt", "ribbed-knit-crewneck", "merino-turtleneck"]],
-    ["price-desc", ["wool-overcoat", "tailored-blazer", "canvas-work-jacket"]],
-    ["name-asc", ["merino-turtleneck", "high-rise-straight-jeans", "linen-wide-leg-trousers"]],
+    ["price-asc", ["tussar-handloom-panjabi", "raw-silk-nehru-vest", "chanderi-silk-kurta"]],
+    ["price-desc", ["royal-zardozi-sherwani", "embroidered-silk-lehenga", "banarasi-silk-saree"]],
+    ["name-asc", ["banarasi-silk-saree", "embroidered-silk-lehenga", "tussar-handloom-panjabi"]],
   ])("sorts deterministically using %s", async (sort, expected) => {
     const response = await getProducts(`?sort=${sort}&pageSize=3`);
     expect(response.body.items.map((item: { slug: string }) => item.slug)).toEqual(expected);
   });
 
   it("paginates after filtering and sorting", async () => {
-    const response = await getProducts("?category=Outerwear&sort=price-asc&page=2&pageSize=1");
-    expect(response.body).toMatchObject({ page: 2, pageSize: 1, total: 3 });
-    expect(response.body.items.map((item: { slug: string }) => item.slug)).toEqual(["tailored-blazer"]);
+    const response = await getProducts("?sort=price-asc&page=2&pageSize=2");
+    expect(response.body).toMatchObject({ page: 2, pageSize: 2, total: 9 });
+    expect(response.body.items.map((item: { slug: string }) => item.slug)).toEqual([
+      "chanderi-silk-kurta",
+      "kashmiri-pashmina-shawl",
+    ]);
   });
 
   it.each([
@@ -61,7 +62,7 @@ describe("GET /api/products", () => {
 });
 
 describe("product detail", () => {
-  it.each(["product-001", "wool-overcoat"])("looks up by id or slug: %s", async (id) => {
+  it.each(["product-001", "royal-zardozi-sherwani"])("looks up by id or slug: %s", async (id) => {
     const response = await request(app).get(`/api/products/${id}`);
     expect(response.status).toBe(200);
     expect(response.body.item).toEqual(products[0]);
